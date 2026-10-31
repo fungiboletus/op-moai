@@ -11,11 +11,6 @@ A Minimoog-inspired synth for the Teenage Engineering OP-1.
 https://github.com/user-attachments/assets/ffee185d-5bb3-4d2d-8a1c-0d8067bc4c57
 
 
-
-
-
-![Moai Screenshot](./docs/screens/04-home-000-at-rest-the-number-faded.png)
-
 [Download the latest release](https://github.com/fungiboletus/op-moai/releases). It *should* be compatible with modded firmwares such as op1r, hundekraft or opus. The installation procedure depends on your firmware.
 
 ## It Does and Does Not Sound like a Minimoog
