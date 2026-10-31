@@ -1,0 +1,20 @@
+{
+  "name": "moai",
+  "author": "moai contributors",
+  "kind": "synth",
+  "symbol": "ENGINE_moai",
+  "sources": [
+    "moai.c",
+    "moai_ui.c"
+  ],
+  "defaults": [
+    1013,
+    3932,
+    26213,
+    21626
+  ],
+  "screen": {
+    "svg": "moai.svg",
+    "symbol": "SCREEN_moai"
+  }
+}

@@ -1,0 +1,14 @@
+# build outputs (CI attaches the release files to the GitHub release)
+/build/
+/.venv/
+plugin/test/build/
+__pycache__/
+*.pyc
+.DS_Store
+*.swp
+*~
+# never commit TE firmware or anything built from it
+*.op1
+*.ldr
+# reference recordings (copyrighted): analysis only, never committed
+*.flac

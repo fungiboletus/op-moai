@@ -1,0 +1,80 @@
+# Build and check moai; on a tag v*, publish a GitHub release with the plugin, the screen preview and the demo.
+# The Blackfin cross compiler and simulator (tools/Dockerfile) take ~30 min to build the first time; their layers are
+# kept in the GitHub Actions cache, so later runs only load them.
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write          # the release (tags only)
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: System packages (pycairo for the preview)
+        run: sudo apt-get update && sudo apt-get install -y libcairo2-dev pkg-config rsync
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Blackfin cross compiler
+        uses: docker/build-push-action@v6
+        with:
+          context: tools
+          file: tools/Dockerfile
+          target: toolchain
+          build-args: JOBS=4
+          tags: bfin-elf-toolchain
+          load: true
+          cache-from: type=gha,scope=bfin
+          cache-to: type=gha,mode=max,scope=bfin
+
+      - name: Blackfin simulator
+        uses: docker/build-push-action@v6
+        with:
+          context: tools
+          file: tools/Dockerfile
+          target: sim
+          build-args: JOBS=4
+          tags: bfin-elf-sim
+          load: true
+          cache-from: type=gha,scope=bfin
+          cache-to: type=gha,mode=max,scope=bfin
+
+      - name: Host tests
+        run: make test
+
+      - name: Blackfin cycles, host == Blackfin
+        run: make bench
+
+      - name: Plugin, preview, demo
+        run: make dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: moai
+          path: |
+            build/moai.op1p
+            build/preview.png
+            build/demo.wav
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" build/moai.op1p build/preview.png build/demo.wav \
+            --title "moai $GITHUB_REF_NAME" --generate-notes --verify-tag

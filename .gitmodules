@@ -1,0 +1,4 @@
+[submodule "op1r-src"]
+	path = op1r-src
+	url = https://github.com/pcppcp/op1r-src.git
+	ignore = dirty
