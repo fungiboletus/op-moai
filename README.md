@@ -4,7 +4,15 @@ A Minimoog-inspired synth for the Teenage Engineering OP-1.
 
 ![Moai running on an OP-1](./docs/screens/moai-demo.gif)
 
-*Ideally a video should demo the synth, but I have to learn how to make music first*.
+*Ideally a video should demo the synth well, but I have to learn how to make music first*.
+
+
+
+https://github.com/user-attachments/assets/ffee185d-5bb3-4d2d-8a1c-0d8067bc4c57
+
+
+
+
 
 ![Moai Screenshot](./docs/screens/04-home-000-at-rest-the-number-faded.png)
 
