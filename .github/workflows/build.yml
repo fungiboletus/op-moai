@@ -17,21 +17,21 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: true
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
       - name: System packages (pycairo for the preview)
         run: sudo apt-get update && sudo apt-get install -y libcairo2-dev pkg-config rsync
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
 
       - name: Blackfin cross compiler
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: tools
           file: tools/Dockerfile
@@ -43,7 +43,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=bfin
 
       - name: Blackfin simulator
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: tools
           file: tools/Dockerfile
@@ -63,7 +63,7 @@ jobs:
       - name: Plugin, preview, demo
         run: make dist
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: moai
           path: |
