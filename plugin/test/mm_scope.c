@@ -12,7 +12,7 @@ int16_t host_sine[8192]; int32_t host_pitch_inc[128]; uint8_t host_voice_mem[6 *
 int16_t host_voice_vel[6]; int16_t host_accel[3]; int16_t host_knobs[8][8]; int host_slot; const uint8_t *host_sample_buffer[8];
 int16_t host_fx_knobs[3][8]; int16_t host_fx_meter[3]; void *host_fx_scratch[3];
 volatile uint8_t op1_fx_page[3][4]; volatile uint8_t op1_eng_page[4];
-uint8_t host_shift; int host_set_knobs_calls;
+int host_shift; int host_set_knobs_calls;
 void host_set_knobs(int slot, const int16_t *w) { (void)slot; (void)w; }
 void *host_find_node(void *s, const char *id) { (void)s; (void)id; return (void *)1; }
 void host_node_set_transform(void *n, const int32_t *m) { (void)n; (void)m; }

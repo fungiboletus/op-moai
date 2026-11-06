@@ -14,7 +14,7 @@ int16_t host_sine[8192]; int32_t host_pitch_inc[128]; uint8_t host_voice_mem[6 *
 int16_t host_voice_vel[6]; int16_t host_accel[3]; int16_t host_knobs[8][8]; int host_slot; const uint8_t *host_sample_buffer[8];
 int16_t host_fx_knobs[3][8]; int16_t host_fx_meter[3]; void *host_fx_scratch[3];
 volatile uint8_t op1_fx_page[3][4]; volatile uint8_t op1_eng_page[4];
-uint8_t host_shift; int host_set_knobs_calls;
+int host_shift; int host_set_knobs_calls;
 void host_set_knobs(int slot, const int16_t *w) { (void)slot; (void)w; host_set_knobs_calls++; }
 #define MAXN 16
 static char node_id[MAXN][16]; static int32_t node_m[MAXN][9]; static int nnodes; static uint8_t node_hid[MAXN];

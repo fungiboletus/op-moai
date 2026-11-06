@@ -28,11 +28,11 @@
 #define MM_SET_KNOBS(slot, w) ((void (*)(void *, const int16_t *))0x01A00D14)((void *)(0x01DDD7E8 + ((slot) & 7) * 0x38), (w))
 #else
 #ifndef MM_HOST_UI                                                    /* host programs that do not drive the UI */
-__attribute__((weak)) uint8_t host_shift;
+__attribute__((weak)) int host_shift;
 __attribute__((weak)) int host_set_knobs_calls;
 __attribute__((weak)) void host_set_knobs(int slot, const int16_t *w) { (void)slot; (void)w; host_set_knobs_calls++; }
 #else                                                                 /* test/mm_ui.c: its own */
-extern uint8_t host_shift;
+extern int host_shift;
 void host_set_knobs(int slot, const int16_t *w);
 #endif
 #define MM_SHIFT host_shift

@@ -13,7 +13,7 @@ int16_t host_sine[8192]; int32_t host_pitch_inc[128]; uint8_t host_voice_mem[6 *
 int16_t host_voice_vel[6]; int16_t host_accel[3]; int16_t host_knobs[8][8]; int host_slot; const uint8_t *host_sample_buffer[8];
 int16_t host_fx_knobs[3][8]; int16_t host_fx_meter[3]; void *host_fx_scratch[3];
 volatile uint8_t op1_fx_page[3][4]; volatile uint8_t op1_eng_page[4];
-uint8_t host_shift; int host_set_knobs_calls;
+int host_shift; int host_set_knobs_calls;
 int16_t host_saved[8][8];                                     /* what the patch setter put into each slot's sound */
 void host_set_knobs(int slot, const int16_t *w) { memcpy(host_saved[slot & 7], w, sizeof host_saved[0]); host_set_knobs_calls++; }
 void *host_find_node(void *s, const char *id) { (void)s; (void)id; return 0; }
