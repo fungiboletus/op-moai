@@ -378,3 +378,60 @@ The image is 48.3 kB + 4.1 kB bss.
 The address still follows the file's length. tools/op1p_pad.py pads a file to a given length and memory size (NULs
 after the SVG, a larger bss: the format allows both), so that two builds load at the same address.
 
+## v3.27: the guard in two steps, a cheaper block setup, and four fixes
+
+**The CPU guard.** Until v3.26 it switched osc 3 off for every voice from 4 sounding voices. Counted over the 121
+sounds, that did nothing for 75 (osc 3 off or silent in 71, in LO in 4), saved 11 % (a saw) to 19 % (a pulse) of a voice
+for the other 46, and in 3 of them (SUB BASS, OCT BASS, and 000, the initial sound) it dropped a louder oscillator than
+it had to. Meanwhile the transistor stages cost more than any oscillator (+38 cycles, 26 sounds) and resting them
+takes no note away. Now, for every voice:
+
+| step | from | back at | what rests | saves per voice |
+|---|---|---|---|---|
+| 1 | 4 voices | 2 | the transistor stages (the plain ladder runs: a little darker when driven) | 38 cycles on a driven sound |
+| 2 | 5 voices | 3 | also the quietest oscillator (a pulse counts 3/4 of its volume; of equals the later one; never the only one), a 93 ms fade | 17 (a saw) .. 40 (a pulse) |
+
+Four notes keep all their oscillators (4 x 149 = 596 cycles per sample for three saws, where 6 voices of two saws
+were 6 x 132 = 792 before and still are). The fade was 23 ms in 8 level steps per block, which ticked (steps of up to
+1/8 of the oscillator's level); it is 32 steps now. `ECO_TR_AT` and `ECO_OSC_AT` (moai.h) are the two thresholds: the
+simulator gives costs, not the OP-1's budget, so they are to be tuned on the device (ECO_OSC_AT 4 is v3.26's count).
+
+**The block setup, every voice.** The per-block parameter setup measured 6 .. 7 cycles per sample, most of it in
+one loop: `for (i = 0; i < P_N; i++) if (i >= P_O1_RANGE) q[i] = P[i]` compiled to 30 iterations of compare and
+taken branch instead of a hardware loop of copies. Written from P_O1_RANGE it is one, and the entry is taken from the
+sync just done instead of a second `entry_of`: params 6 -> 3 cycles per sample. (Sharing the setup between the voices
+of a callback was the first idea: it needs a compare of ~45 words per voice to be safe, and saves less than this.)
+The guard's per-oscillator gains, the envelope read and the note-start check take about 2 of those 3 back:
+
+| cycles per sample per voice (simulator, one voice: the guard at rest) | v3.26 | v3.27 |
+|---|---|---|
+| CLASSIC (2 saws) | 133 | 132 |
+| FAT BASS (3 saws) | 150 | 149 |
+| OBOE (3 pulses) | 203 | 200 |
+| CLASSIC, saturation | 153 | 151 |
+| CLASSIC, drive 75 %, low cut | 171 | 169 |
+| presets, average / the costliest (P70) | 170 / 236 | 168 / 234 |
+
+**The LFO on the contour knob of a preset** derived the contour every block with three library divisions (`pct` x 2
+and the amount's ratio: about 3 % of a voice). The ratio is kept per entry now (Q12, one copy for the audio and one
+for the GUI thread); the amounts differ from the exact division by at most 4 of 32767 (a cent of cutoff).
+
+**Drift.** The walk's step was -8 .. 7 (mean -0.5) and its leak `d >> 9` worked in whole units, so nothing pulled the
+bias back: 7 cents flat at half the knob, 26 at the top, the three oscillators alike. The state has 8 more fraction
+bits and the step is -15 .. 15; a constant pull of half a unit stands for what the two rounding errors did at the
+default, so the default is the same walk (CLASSIC's hash is unchanged: 0.7 cents rms, moving within 0.4 s), and the
+top of the knob wanders 5.6 cents rms around the pitch instead of 7.6 around -26.
+
+**A note on a voice that still sounds** (MONO retrigger, a voice taken in POLY) restarted its oscillators, filter and
+DC blockers: a step of up to 18 000 of 32 767 under an open envelope. The first block of a note now reads the OP-1's
+envelope (`OP1_VOICE_ENV`: one load per block, a call per note): open at the end of the voice's last block and at
+the start of this one, the voice goes on from where it is; else it starts anew, as before.
+
+**Shift + blue on home** (detune) is a relative turn: the core moves the setup word and the next frame puts it back.
+The audio (an interrupt, several blocks per frame) took the moved word for another sound: on a preset, whose word sits
+at the end of its slot, the neighbour's oscillators played for a frame and the session edits (oscillator views,
+saturation, modulation) were derived away. While Shift shows its layer the audio takes the home knobs from P[]; and a
+view that borrows the words switches the audio to P[] before it caps them (the same race, a few instructions wide).
+
+Every scenario's hash but CLASSIC's changes (the drift past its first blocks; osc 3's level by one LSB, no longer
+multiplied by a gain of 32767 / 32768); host == Blackfin. The image is 49.0 kB + 4.1 kB bss.

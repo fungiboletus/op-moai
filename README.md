@@ -25,7 +25,7 @@ From the non-expert ears of the author, this is likely far off the real thing, b
 
 Some effort has been put into making it quick enough to run on the OP-1 under good conditions. Running Moai in monophonic mode, like a real Minimoog, should be perfectly fine.
 
-UNISON and POLY use up to 6 voices, which can be a bit much depending on the other effects you run. If you use POLY or UNISON, consider disabling effects or using lightweight effects. Some new reverberation effects are somewhat heavy. The third oscillator is also disabled in UNISON and POLY. You may find tiny gains by disabling additional Moai features such as saturation and drive if you are running very close to the CPU limit.
+UNISON and POLY use up to 6 voices, which can be a bit much depending on the other effects you run. If you use POLY or UNISON, consider disabling effects or using lightweight effects. Some new reverberation effects are somewhat heavy. To save some CPU there, Moai simplifies the driven filter from 4 notes playing at once, and from 5 notes (or in UNISON) it also rests one oscillator: the quietest one of the sound, on every note. They come back when fewer notes play. You may find tiny gains by disabling additional Moai features such as saturation and drive if you are running very close to the CPU limit.
 
 As a reminder, you can switch between MONO, LEGATO, UNISON, and POLY by holding shift and pressing key 2 (the second key below the screen). You should be able to make interesting sounds in monophonic mode. And you can make simple chords by setting the frequencies of the 3 oscillators.
 

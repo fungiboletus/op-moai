@@ -86,7 +86,8 @@ static uint8_t ui_save;                 /* frames left before the words go into 
 static int16_t ui_setup_seen = -1;      /* the setup (its character) or preset (its words) in place */
 /* home + Shift: a second layer on the same four knobs (the core turns the home words: they are put back) */
 static const int8_t HOME_SHIFT[4] = { P_DETUNE, P_DRIVE, P_AMOUNT, P_SAT };
-static uint8_t ui_layer;                /* 1 while Shift shows HOME_SHIFT on home */
+/* (mm_layer, moai.h: 1 while Shift shows HOME_SHIFT on home; the audio then takes the home knobs from P[]: a word
+   the core has turned and this file has not yet put back would play as another cutoff, or as another sound) */
 static int16_t ui_prev[4];              /* home: last frame's knob words (a load moves several at once) */
 /* knob movement of one click, without / with Shift: the smallest turn seen. It starts high on purpose: a guess too
    high is corrected by the first single clicks. A smaller turn counts once it is seen twice (one odd turn does not),
@@ -156,7 +157,10 @@ static void set_view(int v)
     if (v == mm_view) return;
     int16_t *w = live_words();
     if (mm_view == V_HOME) {                                         /* borrow the knob words */
-        for (int k = 0; k < 4; k++) { P[k] = w[k]; ui_cap[k] = (int16_t)clampcap(w[k]); w[k] = ui_cap[k]; }
+        for (int k = 0; k < 4; k++) P[k] = w[k];
+        view_map(v, mm_map);
+        mm_view = (uint8_t)v;                /* first: the audio (an interrupt) reads the home values from P from here on, */
+        for (int k = 0; k < 4; k++) { ui_cap[k] = (int16_t)clampcap(w[k]); w[k] = ui_cap[k]; }   /* not the capped words */
     } else if (v == V_HOME) {                                        /* give them back, into the sound too */
         for (int k = 0; k < 4; k++) w[k] = P[k];
         MM_SET_KNOBS(ui_slot, w);
@@ -165,7 +169,7 @@ static void set_view(int v)
     for (int k = 0; k < 4; k++) ui_acc[k] = 0;
     view_map(v, mm_map);
     mm_view = (uint8_t)v;
-    ui_layer = 0;
+    mm_layer = 0;
 }
 
 static void click(int k, int shift)
@@ -315,7 +319,8 @@ static void ui_home_from_words(const int16_t *w)                     /* a (new) 
     for (int j = 0; j < 3; j++) ui_sync[j] = -1;                     /* words: no session edits of another sound */
     mm_view = V_HOME;
     view_map(V_HOME, mm_map);
-    ui_layer = 0;
+    mm_layer = 0;
+    for (int i = 0; i < OP1_VOICES; i++) V[i].amp = 0;                /* its notes start anew (the old sound's were cut) */
 }
 
 static void mm_ui_frame(void)
@@ -385,8 +390,8 @@ static void mm_ui_frame(void)
         if (!sh) for (int k = 1; k < 4; k++)                         /* the core's knobs: turning (for the view) */
             if (w[k] != ui_prev[k]) ui_idle[k] = 0;
         for (int k = 0; k < 4; k++) P[k] = ui_prev[k] = w[k];
-        if (sh != ui_layer) {
-            ui_layer = (uint8_t)sh;
+        if (sh != mm_layer) {
+            mm_layer = (uint8_t)sh;
             for (int k = 0; k < 4; k++) { mm_map[k] = sh ? HOME_SHIFT[k] : (int8_t)k; ui_acc[k] = 0; }
         }
     }

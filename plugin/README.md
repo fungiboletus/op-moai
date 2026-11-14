@@ -124,9 +124,16 @@ C3). 002 is the right-channel bass, rounder (8' triangle, 16' saw, less emphasis
 vibrato from osc 3 in LO; the record's lead was a Roland SH-2000) and 004 strings (three saws, detuned, a slow swell,
 for the Solina part). The song changes as it goes: these are starting points, not copies.
 
-**Osc 3 rests in poly / unison**: when 4 or more voices sound at once, osc 3 is switched off for every voice (a 23 ms
-fade; back on at 2 or fewer) so chords and unison fit the OP-1's DSP. The oscillator view says POLY or UNI (all the
-sounding voices on one pitch).
+**The CPU guard in poly / unison**: so that chords and unison fit the OP-1's DSP, the costly extras rest while many
+voices sound, for every voice, in two steps. From 4 voices the transistor stages rest (DRIVE's top half runs the plain
+ladder: a little darker when driven, no note loses a part; back at 2 or fewer). From 5 voices one oscillator rests as
+well, with a 93 ms fade (back at 3 or fewer): the quietest one of the sound, not always osc 3 (a pulse counts 3/4 of
+its volume, as it costs twice a saw; of equals the later one goes), and never the only one. The oscillator view says
+which one, and POLY or UNI (all the sounding voices on one pitch).
+
+**A new note on a voice that still sounds** (a retrigger in MONO, a voice taken for a new note in POLY) goes on from
+where the voice is: the oscillators run on, the filter keeps its state and the contour attacks from its level, as on
+the Minimoog. From silence a note starts anew (random oscillator phases, the filter and the contour at rest).
 
 ## Setups
 
@@ -185,7 +192,8 @@ jump) or another slot brings the home view back.
 ## How the sound works
 
 * **Oscillators**: saw, pulse (saw minus a shifted saw) and their mixes, band-limited with polyBLEP; triangle; noise.
-  Free running and slowly drifting in pitch, as analog ones.
+  Free running and slowly drifting in pitch, as analog ones (DRIFT: a wander of 0.7 cents at its default, 5 to 6 at
+  the top, around the pitch: never off it on average).
 * **Ladder**: four trapezoidal one-pole stages with the feedback solved inside the sample (zero-delay feedback), so the
   resonance sits on the cutoff pitch and self-oscillation starts at a feedback gain of 4 at every cutoff. Soft-clipped
   input (the drive goes there) and output, AC-coupled output (14 Hz), as the Minimoog's.
@@ -228,6 +236,6 @@ and `mm_ui`), `make bench` (Blackfin cycles in the simulator, host == Blackfin o
 | `filter_response.py`, `ring_check.py` | the ladder: resonance position / height / corner, self-oscillation (reports) |
 | `osc_check.py` | oscillator pitch, level and aliasing (polyBLEP vs naive) (a report) |
 | `env_check.py` | contour times, the contour knob, keyboard tracking, velocity (white box) (a report) |
-| `cpu_guard.py` | osc 3 off from 4 voices, on with fewer (fails `make test` otherwise) |
+| `cpu_guard.py` | the CPU guard: its two steps and where they end, which oscillator rests, no click in the fades or on a retrigger of a sounding voice (fails `make test` otherwise) |
 | `fuzz.py` | the top keys with osc 3 in LO and the modulation at full, bent both ways, then 300 random knob / session settings (modulation too), pitches up to the top key and bends: no overflow, no clipping, no DC (fails `make test` otherwise) |
 | `preview.py` / `demo.py` | every view as an image (pycairo) / a demo WAV |
