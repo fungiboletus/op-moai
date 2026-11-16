@@ -29,6 +29,9 @@ void *read_fx_param_safe(int slot, int pos) { (void)slot; (void)pos; return 0; }
 
 static int fails;
 #define CHECK(cond, ...) do { if (cond) printf("PASS "); else { printf("FAIL "); fails++; } printf(__VA_ARGS__); printf("\n"); } while (0)
+/* a knob turn landing between the Shift loop and the word refresh (the core's thread racing the screen's) */
+static int race_k = -1, race_d;
+#define MM_RACE_HOOK() do { if (race_k >= 0) { host_knobs[host_slot][race_k] += race_d; race_k = -1; } } while (0)
 static int16_t *W(void) { return host_knobs[host_slot]; }
 static void fw_turn(int k, int d)
 {
@@ -267,6 +270,34 @@ int main(void)
     CHECK(W()[5] == page_start(P_DETUNE, det) + CLICK, "Shift + blue on home: detune (stored)");
     host_shift = 0; frame();
     CHECK(mm_map[2] == P_EMPH && W()[2] == emp, "Shift released: home knobs again");
+    {   /* user report 2026-11-08: on a preset, Shift + blue sometimes moved AMT and left DET (a race, MM_RACE_HOOK) */
+        int e0 = entry_of(W()[0]), pe = 0;
+        while (pe < N_ENTRIES && !preset_of(pe)) pe++;
+        to_entry_keep(pe);
+        for (int f = 0; f < 10; f++) frame();
+        int16_t amt0 = P[P_AMOUNT], det0 = W()[5];
+        host_shift = 1; frame();
+        for (int i = 0; i < 6; i++) { race_k = 0; race_d = i & 1 ? -CLICK_S : CLICK_S; frame(); frame(); }
+        race_k = 0; race_d = CLICK_S; frame(); frame(); frame();
+        CHECK(entry_of(W()[0]) == pe && P[P_AMOUNT] == amt0 && W()[5] != det0,
+              "Shift + blue on a preset, the turn landing late: still the preset, AMT kept, DET moved (%d %d)", W()[5], det0);
+        /* ... and the audio thread in the gap: the core has added a Shift click to word 0 (on a preset it crosses into
+           the next entry) and the screen has not taken it back yet. The sound and AMT stay (user report 2026-11-08:
+           DET did nothing and AMT moved) */
+        fw_turn(2, 3 * CLICK_S); frame();                            /* AMT edited (a session value) */
+        int16_t amt1 = P[P_AMOUNT], cut1 = P[P_O1_RANGE];
+        for (int i = 0; i < 4; i++) {
+            fw_turn(0, i & 1 ? -CLICK_S : CLICK_S);
+            play_block(); play_block();                              /* audio blocks before the next frame */
+            CHECK(mm_derived_setup == pe && P[P_AMOUNT] == amt1 && P[P_O1_RANGE] == cut1,
+                  "Shift + blue on a preset, audio before the frame: same sound, AMT kept (%d %d, AMT %d %d)",
+                  mm_derived_setup, pe, P[P_AMOUNT], amt1);
+            frame();
+        }
+        CHECK(P[P_AMOUNT] == amt1 && entry_of(W()[0]) == pe, "... and after the frames: AMT %d (was %d), still the preset", P[P_AMOUNT], amt1);
+        host_shift = 0; frame();
+        to_entry_keep(e0);
+    }
 
     /* LO and modulation (Model D: osc 3 in LO as the source) */
     host_shift = 0; frame();
