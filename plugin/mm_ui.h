@@ -86,6 +86,9 @@ static uint8_t ui_save;                 /* frames left before the words go into 
 static int16_t ui_setup_seen = -1;      /* the setup (its character) or preset (its words) in place */
 /* home + Shift: a second layer on the same four knobs (the core turns the home words: they are put back) */
 static const int8_t HOME_SHIFT[4] = { P_DETUNE, P_DRIVE, P_AMOUNT, P_SAT };
+#ifndef MM_RACE_HOOK
+#define MM_RACE_HOOK() ((void)0)                 /* host test: a turn landing between the read and the put-back */
+#endif
 /* (mm_layer, moai.h: 1 while Shift shows HOME_SHIFT on home; the audio then takes the home knobs from P[]: a word
    the core has turned and this file has not yet put back would play as another cutoff, or as another sound) */
 static int16_t ui_prev[4];              /* home: last frame's knob words (a load moves several at once) */
@@ -373,10 +376,14 @@ static void mm_ui_frame(void)
         return;
     }
     if (mm_view == V_HOME) {
+        /* The core turns the words on the KeyHandler thread while this runs on the Gfx thread: each word is read once
+           here, and with Shift held the home words are never taken from w (a turn that lands after this loop stays in
+           w and is next frame's Shift click). Before 2026-11-08 a blue click landing there became the new entry word,
+           which could step to another preset and load its words: DET back, AMT changed (a user report). */
         if (sh) for (int k = 0; k < 4; k++) {                        /* the Shift layer: a Shift click = a click */
-            int32_t d = w[k] - ui_prev[k];
+            const int32_t cur = w[k], d = cur - ui_prev[k];
             if (!d) continue;
-            measure_click(k, d, 1, w[k] <= 0 || w[k] >= 32767);
+            measure_click(k, d, 1, cur <= 0 || cur >= 32767);
             w[k] = ui_prev[k];
             int n = steps(k, d, 1, 1);
             if (n) dirty |= edit(k, HOME_SHIFT[k], n * ui_click[0], 0) | 1;
@@ -389,7 +396,9 @@ static void mm_ui_frame(void)
         }
         if (!sh) for (int k = 1; k < 4; k++)                         /* the core's knobs: turning (for the view) */
             if (w[k] != ui_prev[k]) ui_idle[k] = 0;
-        for (int k = 0; k < 4; k++) P[k] = ui_prev[k] = w[k];
+        MM_RACE_HOOK();                                              /* host test: a turn landing here */
+        for (int k = 0; k < 4; k++) P[k] = ui_prev[k] = sh ? ui_prev[k] : w[k];   /* Shift: what was accepted (a turn landing
+                                                                      * between the read and here stays out of P) */
         if (sh != mm_layer) {
             mm_layer = (uint8_t)sh;
             for (int k = 0; k < 4; k++) { mm_map[k] = sh ? HOME_SHIFT[k] : (int8_t)k; ui_acc[k] = 0; }
@@ -400,7 +409,7 @@ static void mm_ui_frame(void)
             int32_t d = w[k] - ui_cap[k];
             if (d) { measure_click(k, d, sh, w[k] <= 0 || w[k] >= 32767); turn(k, d, sh); w[k] = ui_cap[k]; dirty = 1; }
         }
-    int ent = entry_of(mm_view == V_HOME ? w[0] : P[P_SETUP]);
+    int ent = entry_of(mm_view == V_HOME ? ui_prev[0] : P[P_SETUP]);
     if (ent != ui_setup_seen) {      /* turned to another setup or preset: its words, so a number always sounds the same */
         const preset_t *pr = preset_of(ent);
         const setup_t *st = &SETUPS[ent & (N_SETUPS - 1)];
@@ -422,9 +431,9 @@ static void mm_ui_frame(void)
     if (dirty) ui_save = SAVE_WAIT;
     else if (ui_save && !--ui_save) {               /* the sound's words: on another view, home's (not the borrowed) */
         int16_t s[8];
-        for (int i = 0; i < 8; i++) s[i] = i < 4 && mm_view != V_HOME ? P[i] : w[i];
+        for (int i = 0; i < 8; i++) s[i] = i < 4 ? (mm_view != V_HOME ? P[i] : ui_prev[i]) : w[i];   /* not a click in flight */
         MM_SET_KNOBS(slot, s);
     }
-    sync_derived(mm_view == V_HOME ? w[0] : P[P_SETUP], mm_view == V_HOME ? w[3] : P[P_CONTOUR]);
+    sync_derived(mm_view == V_HOME ? ui_prev[0] : P[P_SETUP], mm_view == V_HOME ? ui_prev[3] : P[P_CONTOUR]);
     sync_follow();
 }
